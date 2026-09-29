@@ -269,49 +269,8 @@ def fuse_function_logic(
                                 "电池温度开始上升"
                             ]
                         }
-                    },
-                    {
-                        "id": "report-battery-thermal-alarm",
-                        "name": "上报动力电池温度异常",
-                        "event": {
-                            "actor": "电池管理系统",
-                            "action": "上报",
-                            "object": "动力电池温度异常信息",
-                            "effect": (
-                                "向整车控制器和驾驶员发送"
-                                "电池温度异常及热风险告警"
-                            ),
-                            "trigger": (
-                                "检测到温度超过安全阈值、"
-                                "温差异常或存在热失控风险"
-                            ),
-                            "condition": (
-                                "温度异常标志有效，或电池温度"
-                                "持续超过安全阈值"
-                            ),
-                            "inputs": [
-                                "温度异常标志",
-                                "电池最高温度",
-                                "电池最低温度",
-                                "电池温差",
-                                "电池热状态判定结果"
-                            ],
-                            "outputs": [
-                                "动力电池温度异常告警",
-                                "热失控风险告警",
-                                "整车热安全控制请求"
-                            ],
-                            "preconditions": [
-                                "已完成动力电池热状态判断",
-                                "告警通信链路正常"
-                            ],
-                            "postconditions": [
-                                "整车控制器已收到热安全告警",
-                                "驾驶员已收到温度异常提示"
-                            ]
-                        }
                     }
-                ],
+                                    ],
                 "summary": (
                     "该功能点集合描述新能源汽车动力电池热管理"
                     "系统从温度监测、热状态判断，到电池冷却、"
@@ -319,19 +278,6 @@ def fuse_function_logic(
                 )
             },
             "relations": [
-                {
-                    "source": "monitor-battery-temperature",
-                    "target": "evaluate-battery-thermal-state",
-                    "source_name": "监测动力电池温度",
-                    "target_name": "判断动力电池热状态",
-                    "relation_type": "data_flow",
-                    "direction": "source_to_target",
-                    "confidence": 0.99,
-                    "evidence": (
-                        "动力电池温度监测结果是判断电池"
-                        "过热、过冷及温差异常的主要输入。"
-                    )
-                },
                 {
                     "source": "evaluate-battery-thermal-state",
                     "target": "control-battery-cooling",
@@ -356,32 +302,6 @@ def fuse_function_logic(
                     "evidence": (
                         "当电池热状态判定为过冷并产生"
                         "加热需求时，触发动力电池加热控制。"
-                    )
-                },
-                {
-                    "source": "evaluate-battery-thermal-state",
-                    "target": "report-battery-thermal-alarm",
-                    "source_name": "判断动力电池热状态",
-                    "target_name": "上报动力电池温度异常",
-                    "relation_type": "control_flow",
-                    "direction": "source_to_target",
-                    "confidence": 0.97,
-                    "evidence": (
-                        "电池热状态判断产生的温度异常标志"
-                        "用于触发动力电池热安全告警。"
-                    )
-                },
-                {
-                    "source": "monitor-battery-temperature",
-                    "target": "report-battery-thermal-alarm",
-                    "source_name": "监测动力电池温度",
-                    "target_name": "上报动力电池温度异常",
-                    "relation_type": "data_flow",
-                    "direction": "source_to_target",
-                    "confidence": 0.96,
-                    "evidence": (
-                        "温度异常告警需要携带电池最高温度、"
-                        "最低温度及电池温差等实时监测数据。"
                     )
                 }
             ]

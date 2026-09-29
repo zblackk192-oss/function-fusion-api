@@ -96,209 +96,292 @@ def fuse_function_logic(
         "result": {
             "function_point_set": {
                 "raw_text": (
-                    "新能源汽车动力电池管理系统需要实时检测"
-                    "动力电池剩余电量。当系统检测到剩余电量"
-                    "低于20%时，应判断车辆进入低电量状态，"
-                    "限制车辆最大驱动功率，并通过人机交互"
-                    "系统提示驾驶员及时充电。"
+                    "新能源汽车动力电池热管理系统需要实时监测"
+                    "电池包温度，并根据温度数据判断电池热状态。"
+                    "当电池温度超过冷却阈值时，系统应启动冷却；"
+                    "当电池温度低于加热阈值时，系统应启动加热；"
+                    "当检测到电池温度异常或存在热失控风险时，"
+                    "系统应向整车控制器和驾驶员发送告警信息。"
                 ),
                 "function_points": [
                     {
-                        "id": "detect-battery-soc",
-                        "name": "检测动力电池剩余电量",
+                        "id": "monitor-battery-temperature",
+                        "name": "监测动力电池温度",
                         "event": {
                             "actor": "电池管理系统",
-                            "action": "检测",
-                            "object": "动力电池剩余电量",
+                            "action": "监测",
+                            "object": "动力电池温度",
                             "effect": (
-                                "获得动力电池当前剩余电量"
+                                "获得动力电池包内部各测温点的"
+                                "实时温度数据"
                             ),
-                            "trigger": "车辆启动或周期检测触发",
+                            "trigger": (
+                                "车辆启动或电池管理系统"
+                                "周期采样触发"
+                            ),
                             "condition": (
                                 "电池管理系统已上电且"
-                                "电池采样通信正常"
+                                "温度传感器通信正常"
                             ),
                             "inputs": [
                                 "车辆启动信号",
-                                "动力电池电压数据",
-                                "动力电池电流数据",
-                                "电池状态采样数据"
+                                "电芯温度传感器数据",
+                                "电池包环境温度数据"
                             ],
                             "outputs": [
-                                "动力电池剩余电量"
+                                "电池最高温度",
+                                "电池最低温度",
+                                "电池平均温度",
+                                "电池温差"
                             ],
                             "preconditions": [
-                                "车辆已启动",
                                 "电池管理系统正常运行",
-                                "电池采样数据有效"
+                                "温度传感器已完成初始化",
+                                "温度采样数据有效"
                             ],
                             "postconditions": [
-                                "已获得最新的动力电池剩余电量"
+                                "已获得最新的动力电池温度信息"
                             ]
                         }
                     },
                     {
-                        "id": "evaluate-low-battery-state",
-                        "name": "判断低电量状态",
+                        "id": "evaluate-battery-thermal-state",
+                        "name": "判断动力电池热状态",
                         "event": {
                             "actor": "电池管理系统",
                             "action": "判断",
-                            "object": "动力电池低电量状态",
+                            "object": "动力电池热状态",
                             "effect": (
-                                "确定动力电池是否进入"
-                                "低电量运行状态"
+                                "确定动力电池处于正常、"
+                                "过热、过冷或温度异常状态"
                             ),
                             "trigger": (
-                                "获得最新的动力电池剩余电量"
+                                "获得最新的动力电池温度信息"
                             ),
                             "condition": (
-                                "动力电池剩余电量检测结果有效"
+                                "电池温度数据有效且热管理"
+                                "阈值已经完成配置"
                             ),
                             "inputs": [
-                                "动力电池剩余电量",
-                                "低电量阈值20%"
+                                "电池最高温度",
+                                "电池最低温度",
+                                "电池平均温度",
+                                "电池温差",
+                                "冷却启动阈值",
+                                "加热启动阈值",
+                                "温度异常阈值"
                             ],
                             "outputs": [
-                                "低电量状态判定结果"
+                                "电池热状态判定结果",
+                                "冷却需求",
+                                "加热需求",
+                                "温度异常标志"
                             ],
                             "preconditions": [
-                                "已完成动力电池剩余电量检测",
-                                "低电量阈值已配置"
+                                "已完成动力电池温度监测",
+                                "热管理控制阈值有效"
                             ],
                             "postconditions": [
-                                "已确定车辆是否处于低电量状态"
+                                "已确定动力电池当前热状态",
+                                "已生成功率热管理需求"
                             ]
                         }
                     },
                     {
-                        "id": "limit-drive-power",
-                        "name": "限制车辆驱动功率",
+                        "id": "control-battery-cooling",
+                        "name": "执行动力电池冷却",
                         "event": {
-                            "actor": "车辆能量管理控制器",
-                            "action": "限制",
-                            "object": "车辆最大驱动功率",
+                            "actor": "电池热管理控制器",
+                            "action": "冷却",
+                            "object": "动力电池包",
                             "effect": (
-                                "降低车辆最大可用驱动功率，"
-                                "减少动力电池能量消耗"
+                                "降低动力电池温度并将其维持在"
+                                "允许的工作温度范围内"
                             ),
                             "trigger": (
-                                "低电量状态判定结果为低电量"
+                                "电池热状态判定结果为过热，"
+                                "或冷却需求有效"
                             ),
                             "condition": (
-                                "动力电池剩余电量低于20%，"
-                                "且车辆处于可执行功率限制的"
-                                "运行状态"
+                                "电池温度高于冷却启动阈值，"
+                                "且冷却系统不存在禁止运行故障"
                             ),
                             "inputs": [
-                                "低电量状态判定结果",
-                                "当前车辆运行状态",
-                                "当前驱动功率需求"
+                                "冷却需求",
+                                "电池最高温度",
+                                "电池平均温度",
+                                "车辆运行状态",
+                                "冷却系统状态"
                             ],
                             "outputs": [
-                                "驱动功率限制指令"
+                                "冷却控制指令",
+                                "冷却液泵控制指令",
+                                "冷却风扇控制指令"
                             ],
                             "preconditions": [
-                                "车辆已进入低电量状态",
-                                "车辆能量管理控制器正常运行"
+                                "已确认动力电池存在冷却需求",
+                                "冷却液回路可用",
+                                "冷却执行机构正常"
                             ],
                             "postconditions": [
-                                "车辆最大驱动功率已受限"
+                                "动力电池冷却功能已启动",
+                                "电池温度开始下降或保持稳定"
                             ]
                         }
                     },
                     {
-                        "id": "notify-driver-to-charge",
-                        "name": "提示驾驶员及时充电",
+                        "id": "control-battery-heating",
+                        "name": "执行动力电池加热",
                         "event": {
-                            "actor": "车辆人机交互系统",
-                            "action": "提示",
-                            "object": "驾驶员",
+                            "actor": "电池热管理控制器",
+                            "action": "加热",
+                            "object": "动力电池包",
                             "effect": (
-                                "向驾驶员展示低电量信息和"
-                                "充电提醒"
+                                "提高动力电池温度并将其恢复到"
+                                "适宜的工作温度范围"
                             ),
                             "trigger": (
-                                "低电量状态判定结果为低电量"
+                                "电池热状态判定结果为过冷，"
+                                "或加热需求有效"
                             ),
                             "condition": (
-                                "车辆人机交互系统正常运行"
+                                "电池温度低于加热启动阈值，"
+                                "且加热系统不存在禁止运行故障"
                             ),
                             "inputs": [
-                                "低电量状态判定结果",
-                                "动力电池剩余电量"
+                                "加热需求",
+                                "电池最低温度",
+                                "电池平均温度",
+                                "车辆运行状态",
+                                "加热系统状态"
                             ],
                             "outputs": [
-                                "低电量告警信息",
-                                "充电提示信息"
+                                "加热控制指令",
+                                "电池加热器控制指令"
                             ],
                             "preconditions": [
-                                "车辆已进入低电量状态",
-                                "仪表或中控显示功能可用"
+                                "已确认动力电池存在加热需求",
+                                "加热装置可用",
+                                "动力电池允许执行加热"
                             ],
                             "postconditions": [
-                                "驾驶员已收到低电量充电提示"
+                                "动力电池加热功能已启动",
+                                "电池温度开始上升"
+                            ]
+                        }
+                    },
+                    {
+                        "id": "report-battery-thermal-alarm",
+                        "name": "上报动力电池温度异常",
+                        "event": {
+                            "actor": "电池管理系统",
+                            "action": "上报",
+                            "object": "动力电池温度异常信息",
+                            "effect": (
+                                "向整车控制器和驾驶员发送"
+                                "电池温度异常及热风险告警"
+                            ),
+                            "trigger": (
+                                "检测到温度超过安全阈值、"
+                                "温差异常或存在热失控风险"
+                            ),
+                            "condition": (
+                                "温度异常标志有效，或电池温度"
+                                "持续超过安全阈值"
+                            ),
+                            "inputs": [
+                                "温度异常标志",
+                                "电池最高温度",
+                                "电池最低温度",
+                                "电池温差",
+                                "电池热状态判定结果"
+                            ],
+                            "outputs": [
+                                "动力电池温度异常告警",
+                                "热失控风险告警",
+                                "整车热安全控制请求"
+                            ],
+                            "preconditions": [
+                                "已完成动力电池热状态判断",
+                                "告警通信链路正常"
+                            ],
+                            "postconditions": [
+                                "整车控制器已收到热安全告警",
+                                "驾驶员已收到温度异常提示"
                             ]
                         }
                     }
                 ],
                 "summary": (
-                    "该功能点集合描述新能源汽车在动力电池"
-                    "低电量场景下，从剩余电量检测、低电量"
-                    "状态判断，到驱动功率限制和驾驶员充电"
-                    "提醒的完整功能链路。"
+                    "该功能点集合描述新能源汽车动力电池热管理"
+                    "系统从温度监测、热状态判断，到电池冷却、"
+                    "电池加热以及温度异常告警的完整功能链路。"
                 )
             },
             "relations": [
                 {
-                    "source": "detect-battery-soc",
-                    "target": "evaluate-low-battery-state",
-                    "source_name": "检测动力电池剩余电量",
-                    "target_name": "判断低电量状态",
+                    "source": "monitor-battery-temperature",
+                    "target": "evaluate-battery-thermal-state",
+                    "source_name": "监测动力电池温度",
+                    "target_name": "判断动力电池热状态",
                     "relation_type": "data_flow",
                     "direction": "source_to_target",
                     "confidence": 0.99,
                     "evidence": (
-                        "动力电池剩余电量检测结果作为"
-                        "低电量状态判断的输入。"
+                        "动力电池温度监测结果是判断电池"
+                        "过热、过冷及温差异常的主要输入。"
                     )
                 },
                 {
-                    "source": "evaluate-low-battery-state",
-                    "target": "limit-drive-power",
-                    "source_name": "判断低电量状态",
-                    "target_name": "限制车辆驱动功率",
-                    "relation_type": "control_flow",
-                    "direction": "source_to_target",
-                    "confidence": 0.97,
-                    "evidence": (
-                        "低电量状态判定结果为低电量时，"
-                        "触发车辆驱动功率限制。"
-                    )
-                },
-                {
-                    "source": "evaluate-low-battery-state",
-                    "target": "notify-driver-to-charge",
-                    "source_name": "判断低电量状态",
-                    "target_name": "提示驾驶员及时充电",
+                    "source": "evaluate-battery-thermal-state",
+                    "target": "control-battery-cooling",
+                    "source_name": "判断动力电池热状态",
+                    "target_name": "执行动力电池冷却",
                     "relation_type": "control_flow",
                     "direction": "source_to_target",
                     "confidence": 0.98,
                     "evidence": (
-                        "低电量状态判定结果为低电量时，"
-                        "触发驾驶员充电提醒。"
+                        "当电池热状态判定为过热并产生"
+                        "冷却需求时，触发动力电池冷却控制。"
                     )
                 },
                 {
-                    "source": "detect-battery-soc",
-                    "target": "notify-driver-to-charge",
-                    "source_name": "检测动力电池剩余电量",
-                    "target_name": "提示驾驶员及时充电",
+                    "source": "evaluate-battery-thermal-state",
+                    "target": "control-battery-heating",
+                    "source_name": "判断动力电池热状态",
+                    "target_name": "执行动力电池加热",
+                    "relation_type": "control_flow",
+                    "direction": "source_to_target",
+                    "confidence": 0.98,
+                    "evidence": (
+                        "当电池热状态判定为过冷并产生"
+                        "加热需求时，触发动力电池加热控制。"
+                    )
+                },
+                {
+                    "source": "evaluate-battery-thermal-state",
+                    "target": "report-battery-thermal-alarm",
+                    "source_name": "判断动力电池热状态",
+                    "target_name": "上报动力电池温度异常",
+                    "relation_type": "control_flow",
+                    "direction": "source_to_target",
+                    "confidence": 0.97,
+                    "evidence": (
+                        "电池热状态判断产生的温度异常标志"
+                        "用于触发动力电池热安全告警。"
+                    )
+                },
+                {
+                    "source": "monitor-battery-temperature",
+                    "target": "report-battery-thermal-alarm",
+                    "source_name": "监测动力电池温度",
+                    "target_name": "上报动力电池温度异常",
                     "relation_type": "data_flow",
                     "direction": "source_to_target",
-                    "confidence": 0.95,
+                    "confidence": 0.96,
                     "evidence": (
-                        "充电提示需要使用动力电池剩余电量，"
-                        "向驾驶员展示当前电量信息。"
+                        "温度异常告警需要携带电池最高温度、"
+                        "最低温度及电池温差等实时监测数据。"
                     )
                 }
             ]
